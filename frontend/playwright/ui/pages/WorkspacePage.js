@@ -108,12 +108,8 @@ export class WorkspacePage extends BaseWebSocketPage {
 
     async waitForIdle(options) {
       await this.page.evaluate(
-        (options) =>
-          new Promise((resolve) =>
-            globalThis.requestIdleCallback(resolve, options),
-          ),
-        options,
-      );
+        (options) => new Promise(
+          (resolve) => globalThis.requestIdleCallback(resolve, options)), options);
     }
   };
 
@@ -233,7 +229,7 @@ export class WorkspacePage extends BaseWebSocketPage {
 
   async #waitForWebSocketReadiness(pageName) {
     // TODO: find a better event to settle whether the app is ready to receive notifications via ws
-    await expect(this.pageName).toHaveText(pageName, { timeout: 30000 });
+    await expect(this.pageName).toHaveText(pageName, { timeout: 30000 })
   }
 
   async sendPresenceMessage(fixture) {
