@@ -634,6 +634,24 @@
     *assert*
     (merge debug-shortcuts)))
 
-(defn get-tooltip [shortcut]
+(defn get-tooltip
+  "Returns the tooltip string for a shortcut, using any custom binding
+  from the user's profile props if one exists, falling back to the
+  default :tooltip field."
+  [shortcut]
   (assert (contains? shortcuts shortcut) (str shortcut))
-  (get-in shortcuts [shortcut :tooltip]))
+  (let [custom-shortcuts (get-in @st/state [:profile :props :custom-shortcuts])
+        custom-command   (get custom-shortcuts shortcut)]
+    (if (and custom-command (not= custom-command ""))
+      (ds/command->tooltip custom-command)
+      (get-in shortcuts [shortcut :tooltip]))))
+
+(defn get-effective-tooltip
+  "Returns the tooltip string for a shortcut given an already-resolved
+  custom-shortcuts map. Use this when you already have the custom
+  shortcuts derefed for the current render cycle."
+  [shortcut custom-shortcuts]
+  (let [custom-command (get custom-shortcuts shortcut)]
+    (if (and custom-command (not= custom-command ""))
+      (ds/command->tooltip custom-command)
+      (get-in shortcuts [shortcut :tooltip]))))

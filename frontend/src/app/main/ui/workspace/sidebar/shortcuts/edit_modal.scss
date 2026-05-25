@@ -1,0 +1,125 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// Copyright (c) KALEIDOS INC
+
+@use "refactor/common-refactor.scss" as deprecated;
+
+.modal-overlay {
+  @extend %modal-overlay-base;
+}
+
+.modal-container {
+  @extend %modal-container-base;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xl);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title {
+  @include deprecated.headline-medium-typography;
+
+  color: var(--modal-title-foreground-color);
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: var(--sp-m);
+  right: var(--sp-m);
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-l);
+}
+
+.shortcut-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-s);
+}
+
+.shortcut-label {
+  @include deprecated.body-large-typography;
+
+  color: var(--modal-title-foreground-color);
+  font-weight: bold;
+}
+
+.current-keys {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-s);
+}
+
+.current-label {
+  @include deprecated.body-small-typography;
+
+  color: var(--color-foreground-secondary);
+}
+
+.current-value {
+  @include deprecated.body-small-typography;
+
+  color: var(--color-foreground-secondary);
+  text-transform: capitalize;
+}
+
+.recording-area {
+  @include deprecated.flex-center;
+
+  min-height: deprecated.$s-60;
+  padding: var(--sp-l);
+  border-radius: deprecated.$br-8;
+  border: 2px dashed var(--color-foreground-secondary);
+  background-color: var(--pill-background-color);
+}
+
+.recording-hint {
+  @include deprecated.body-large-typography;
+
+  color: var(--color-foreground-secondary);
+}
+
+.recorded-keys {
+  @include deprecated.flex-center;
+
+  gap: deprecated.$s-4;
+}
+
+.key {
+  @include deprecated.body-small-typography;
+  @include deprecated.flex-center;
+
+  text-transform: capitalize;
+  height: deprecated.$s-28;
+  padding: deprecated.$s-4 deprecated.$s-8;
+  border-radius: deprecated.$s-6;
+  background-color: var(--menu-shortcut-background-color);
+  color: var(--pill-foreground-color);
+}
+
+.recording-ellipsis {
+  @include deprecated.body-small-typography;
+
+  color: var(--color-foreground-secondary);
+  margin-left: var(--sp-s);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.action-buttons {
+  @extend %modal-action-btns;
+}

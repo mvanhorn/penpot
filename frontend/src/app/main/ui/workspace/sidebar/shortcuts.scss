@@ -16,7 +16,16 @@
 }
 
 .search-field {
+  display: flex;
+  align-items: center;
+  gap: deprecated.$s-4;
   margin: deprecated.$s-16 deprecated.$s-12 deprecated.$s-4 deprecated.$s-12;
+
+  // The search bar should fill available space; the reset-all button sits at the end
+  & > :first-child {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .shortcuts-title {
@@ -91,6 +100,33 @@
 
         margin-left: deprecated.$s-2;
         color: var(--pill-foreground-color);
+        flex: 1;
+        min-width: 0;
+      }
+
+      .shortcut-actions {
+        display: flex;
+        align-items: center;
+        gap: deprecated.$s-2;
+      }
+
+      .edit-buttons {
+        display: flex;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+      }
+
+      &:hover .edit-buttons {
+        opacity: 1;
+      }
+
+      &.customized {
+        background-color: var(--pill-background-color-hover, var(--pill-background-color));
+
+        .edit-buttons {
+          opacity: 1;
+        }
       }
 
       .keys {

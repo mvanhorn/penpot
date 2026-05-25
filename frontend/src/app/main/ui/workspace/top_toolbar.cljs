@@ -87,8 +87,10 @@
 (mf/defc image-upload*
   {::mf/wrap [mf/memo]}
   []
-  (let [ref            (mf/use-ref nil)
-        file-id        (mf/use-ctx ctx/current-file-id)
+  (let [ref              (mf/use-ref nil)
+        file-id          (mf/use-ctx ctx/current-file-id)
+        custom-shortcuts (mf/deref refs/custom-shortcuts)
+        get-tt           #(sc/get-effective-tooltip % custom-shortcuts)
 
         on-click
         (mf/use-fn
@@ -111,8 +113,8 @@
              (st/emit! (dwm/upload-media-workspace params)))))]
     [:li
      [:button
-      {:title (tr "workspace.toolbar.image" (sc/get-tooltip :insert-image))
-       :aria-label (tr "workspace.toolbar.image" (sc/get-tooltip :insert-image))
+      {:title (tr "workspace.toolbar.image" (get-tt :insert-image))
+       :aria-label (tr "workspace.toolbar.image" (get-tt :insert-image))
        :on-click on-click
        :class (stl/css :main-toolbar-options-button)}
       deprecated-icon/img
@@ -142,8 +144,9 @@
   (let [drawtool      (mf/deref refs/selected-drawing-tool)
         edition       (mf/deref refs/selected-edition)
 
-        profile       (mf/deref refs/profile)
-        props         (get profile :props)
+        profile           (mf/deref refs/profile)
+        props             (get profile :props)
+        custom-shortcuts  (mf/deref refs/custom-shortcuts)
 
         read-only?    (mf/use-ctx ctx/workspace-read-only?)
         rulers?       (mf/deref refs/rulers?)
@@ -181,10 +184,12 @@
            (dom/blur! (dom/get-target event))
            (st/emit! (dwc/toggle-toolbar-visibility))))
 
+        get-tt           #(sc/get-effective-tooltip % custom-shortcuts)
+
         test-tooltip-board-text
         (if (not (:workspace-visited props))
-          (tr "workspace.toolbar.frame-first-time" (sc/get-tooltip :draw-frame))
-          (tr "workspace.toolbar.frame" (sc/get-tooltip :draw-frame)))]
+          (tr "workspace.toolbar.frame-first-time" (get-tt :draw-frame))
+          (tr "workspace.toolbar.frame" (get-tt :draw-frame)))]
 
     (when-not ^boolean read-only?
       [:aside {:class (stl/css-case :main-toolbar true
@@ -194,8 +199,8 @@
              :data-testid "toolbar-options"}
         [:li
          [:button
-          {:title (tr "workspace.toolbar.move"  (sc/get-tooltip :move))
-           :aria-label (tr "workspace.toolbar.move"  (sc/get-tooltip :move))
+          {:title (tr "workspace.toolbar.move"  (get-tt :move))
+           :aria-label (tr "workspace.toolbar.move"  (get-tt :move))
            :class (stl/css-case :main-toolbar-options-button true
                                 :selected (and (nil? drawtool)
                                                (not edition)))
@@ -205,7 +210,7 @@
          [:li
           [:button
            {:title test-tooltip-board-text
-            :aria-label (tr "workspace.toolbar.frame" (sc/get-tooltip :draw-frame))
+            :aria-label (tr "workspace.toolbar.frame" (get-tt :draw-frame))
             :class  (stl/css-case :main-toolbar-options-button true :selected (= drawtool :frame))
             :on-click select-drawtool
             :data-tool "frame"
@@ -213,8 +218,8 @@
            deprecated-icon/board]]
          [:li
           [:button
-           {:title (tr "workspace.toolbar.rect" (sc/get-tooltip :draw-rect))
-            :aria-label (tr "workspace.toolbar.rect" (sc/get-tooltip :draw-rect))
+           {:title (tr "workspace.toolbar.rect" (get-tt :draw-rect))
+            :aria-label (tr "workspace.toolbar.rect" (get-tt :draw-rect))
             :class (stl/css-case :main-toolbar-options-button true :selected (= drawtool :rect))
             :on-click select-drawtool
             :data-tool "rect"
@@ -222,8 +227,8 @@
            deprecated-icon/rectangle]]
          [:li
           [:button
-           {:title (tr "workspace.toolbar.ellipse" (sc/get-tooltip :draw-ellipse))
-            :aria-label (tr "workspace.toolbar.ellipse" (sc/get-tooltip :draw-ellipse))
+           {:title (tr "workspace.toolbar.ellipse" (get-tt :draw-ellipse))
+            :aria-label (tr "workspace.toolbar.ellipse" (get-tt :draw-ellipse))
             :class (stl/css-case :main-toolbar-options-button true :selected (= drawtool :circle))
             :on-click select-drawtool
             :data-tool "circle"
@@ -231,8 +236,8 @@
            deprecated-icon/ellipse]]
          [:li
           [:button
-           {:title (tr "workspace.toolbar.text" (sc/get-tooltip :draw-text))
-            :aria-label (tr "workspace.toolbar.text" (sc/get-tooltip :draw-text))
+           {:title (tr "workspace.toolbar.text" (get-tt :draw-text))
+            :aria-label (tr "workspace.toolbar.text" (get-tt :draw-text))
             :class (stl/css-case :main-toolbar-options-button true :selected (= drawtool :text))
             :on-click select-drawtool
             :data-tool "text"}
@@ -242,8 +247,8 @@
 
          [:li
           [:button
-           {:title  (tr "workspace.toolbar.curve" (sc/get-tooltip :draw-curve))
-            :aria-label (tr "workspace.toolbar.curve" (sc/get-tooltip :draw-curve))
+           {:title  (tr "workspace.toolbar.curve" (get-tt :draw-curve))
+            :aria-label (tr "workspace.toolbar.curve" (get-tt :draw-curve))
             :class (stl/css-case :main-toolbar-options-button true :selected (= drawtool :curve))
             :on-click select-drawtool
             :data-tool "curve"
@@ -251,8 +256,8 @@
            deprecated-icon/curve]]
          [:li
           [:button
-           {:title (tr "workspace.toolbar.path" (sc/get-tooltip :draw-path))
-            :aria-label (tr "workspace.toolbar.path" (sc/get-tooltip :draw-path))
+           {:title (tr "workspace.toolbar.path" (get-tt :draw-path))
+            :aria-label (tr "workspace.toolbar.path" (get-tt :draw-path))
             :class (stl/css-case :main-toolbar-options-button true :selected (= drawtool :path))
             :on-click select-drawtool
             :data-tool "path"
@@ -262,8 +267,8 @@
          (when (features/active-feature? @st/state "plugins/runtime")
            [:li
             [:button
-             {:title (tr "workspace.toolbar.plugins" (sc/get-tooltip :plugins))
-              :aria-label (tr "workspace.toolbar.plugins" (sc/get-tooltip :plugins))
+             {:title (tr "workspace.toolbar.plugins" (get-tt :plugins))
+              :aria-label (tr "workspace.toolbar.plugins" (get-tt :plugins))
               :class (stl/css :main-toolbar-options-button)
               :on-click #(st/emit!
                           (ev/event {::ev/name "open-plugins-manager"

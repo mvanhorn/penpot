@@ -11,15 +11,20 @@
    [app.common.data.macros :as dm]
    [app.config :as cf]
    [app.main.data.dashboard.shortcuts]
+   [app.main.data.modal :as modal]
    [app.main.data.shortcuts :as ds]
    [app.main.data.viewer.shortcuts]
    [app.main.data.workspace :as dw]
    [app.main.data.workspace.path.shortcuts]
    [app.main.data.workspace.shortcuts]
+   [app.main.data.workspace.shortcuts.customize :as customize]
+   [app.main.refs :as refs]
    [app.main.store :as st]
    [app.main.ui.components.search-bar :refer [search-bar*]]
+   [app.main.ui.ds.buttons.icon-button :refer [icon-button*]]
    [app.main.ui.ds.foundations.assets.icon :as i :refer [icon*]]
    [app.main.ui.ds.product.panel-title :refer [panel-title*]]
+   [app.main.ui.workspace.sidebar.shortcuts.edit-modal]
    [app.util.dom :as dom]
    [app.util.i18n :refer [tr]]
    [app.util.strings :refer [matches-search]]
@@ -262,7 +267,8 @@
                                 :command command}])])]))
 
 (mf/defc shortcut-row*
-  [{:keys [elements filter-term is-match-section is-match-subsection]}]
+  [{:keys [elements filter-term is-match-section is-match-subsection
+           editable? custom-shortcuts on-edit on-reset]}]
   (let [shortcut-name         (keys elements)
         shortcut-translations (map #(translation-keyname :sc %) shortcut-name)
         match-shortcut?       (some #(matches-search % @filter-term) shortcut-translations)
@@ -275,13 +281,33 @@
      (for [command-translate sorted-filtered]
        (let [sc-by-translate  (first (filter #(= (:translation (second %)) command-translate) elements))
              [command  comand-info] sc-by-translate
-             content                (or (:show-command comand-info) (:command comand-info))]
-         [:li {:class (stl/css :shortcuts-name)
+             content                (or (:show-command comand-info) (:command comand-info))
+             customized?            (and editable? (contains? custom-shortcuts command))]
+         [:li {:class (stl/css-case :shortcuts-name true
+                                    :customized customized?)
                :key command-translate}
           [:span {:class (stl/css :command-name)}
            command-translate]
-          [:> shortcuts-keys* {:content content
-                               :command command}]]))]))
+          [:div {:class (stl/css :shortcut-actions)}
+           [:> shortcuts-keys* {:content content
+                                :command command}]
+           (when editable?
+             [:div {:class (stl/css :edit-buttons)}
+              (when customized?
+                [:> icon-button* {:variant "ghost"
+                                  :aria-label (tr "shortcuts.reset")
+                                  :on-click (fn [e]
+                                              (dom/stop-propagation e)
+                                              (on-reset command))
+                                  :icon i/reload
+                                  :icon-size "s"}])
+              [:> icon-button* {:variant "ghost"
+                                :aria-label (tr "shortcuts.edit")
+                                :on-click (fn [e]
+                                            (dom/stop-propagation e)
+                                            (on-edit command))
+                                :icon i/curve
+                                :icon-size "s"}]])]]))]))
 
 (mf/defc section-title*
   [{:keys [name is-visible is-sub]}]
@@ -295,7 +321,8 @@
                     (stl/css :section-name))} name]])
 
 (mf/defc shortcut-subsection*
-  [{:keys [subsections manage-sections filter-term is-match-section open-sections]}]
+  [{:keys [subsections manage-sections filter-term is-match-section open-sections
+           editable? custom-shortcuts on-edit on-reset]}]
   (let [subsections-names       (keys subsections)
         subsection-translations (if (= :none (first subsections-names))
                                   (map #(translation-keyname :sc %) subsections-names)
@@ -307,7 +334,11 @@
         [:> shortcut-row* {:elements (:children basic-shortcuts)
                            :filter-term filter-term
                            :is-match-section is-match-section
-                           :is-match-subsection true}])
+                           :is-match-subsection true
+                           :editable? editable?
+                           :custom-shortcuts custom-shortcuts
+                           :on-edit on-edit
+                           :on-reset on-reset}])
 
       [:ul {:class (stl/css :subsection-menu)}
        (for [sub-translated sorted-translations]
@@ -328,10 +359,15 @@
                [:> shortcut-row* {:elements (:children sub-info)
                                   :filter-term filter-term
                                   :is-match-section is-match-section
-                                  :is-match-subsection match-subsection?}]]])))])))
+                                  :is-match-subsection match-subsection?
+                                  :editable? editable?
+                                  :custom-shortcuts custom-shortcuts
+                                  :on-edit on-edit
+                                  :on-reset on-reset}]]])))])))
 
 (mf/defc shortcut-section*
-  [{:keys [section manage-sections open-sections filter-term]}]
+  [{:keys [section manage-sections open-sections filter-term
+           editable? custom-shortcuts on-edit on-reset]}]
   (let [[section-key section-info] section
         section-id          (:id section-info)
         section-translation (translation-keyname :sec section-key)
@@ -359,13 +395,24 @@
                                   :open-sections open-sections
                                   :manage-sections manage-sections
                                   :is-match-section match-section?
-                                  :filter-term filter-term}]]])))
+                                  :filter-term filter-term
+                                  :editable? editable?
+                                  :custom-shortcuts custom-shortcuts
+                                  :on-edit on-edit
+                                  :on-reset on-reset}]]])))
+
+(def ^:private workspace-shortcuts-raw
+  (d/deep-merge app.main.data.workspace.path.shortcuts/shortcuts
+                app.main.data.workspace.shortcuts/shortcuts))
 
 (mf/defc shortcuts-container*
   [{:keys [class]}]
-  (let [workspace-shortcuts          app.main.data.workspace.shortcuts/shortcuts
-        path-shortcuts               app.main.data.workspace.path.shortcuts/shortcuts
-        all-workspace-shortcuts      (->> (d/deep-merge path-shortcuts workspace-shortcuts)
+  (let [profile                      (mf/deref refs/profile)
+        custom-shortcuts             (get-in profile [:props :custom-shortcuts])
+
+        workspace-shortcuts-custom   (ds/apply-custom-overrides workspace-shortcuts-raw custom-shortcuts)
+
+        all-workspace-shortcuts      (->> workspace-shortcuts-custom
                                           (add-translation :sc)
                                           (into {}))
 
@@ -484,7 +531,30 @@
         (mf/use-callback
          (fn [_]
            (reset! open-sections [[1]])
-           (reset! filter-term "")))]
+           (reset! filter-term "")))
+
+        on-edit-shortcut
+        (mf/use-callback
+         (mf/deps custom-shortcuts workspace-shortcuts-custom)
+         (fn [shortcut-key]
+           (let [default-command (:command (get workspace-shortcuts-raw shortcut-key))
+                 current-command (or (get custom-shortcuts shortcut-key) default-command)]
+             (st/emit! (modal/show :shortcut-edit
+                                   {:shortcut-key     shortcut-key
+                                    :shortcut-name    (translation-keyname :sc shortcut-key)
+                                    :current-command  current-command
+                                    :default-command  default-command
+                                    :all-shortcuts    workspace-shortcuts-custom})))))
+
+        on-reset-shortcut
+        (mf/use-callback
+         (fn [shortcut-key]
+           (st/emit! (customize/reset-custom-shortcut shortcut-key))))
+
+        on-reset-all
+        (mf/use-callback
+         (fn [_]
+           (st/emit! (customize/reset-all-custom-shortcuts))))]
 
     [:div {:class (dm/str class " " (stl/css :shortcuts))}
      [:> panel-title* {:class (stl/css :shortcuts-title)
@@ -497,14 +567,26 @@
                        :value @filter-term
                        :placeholder (tr "shortcuts.title")
                        :icon-id i/search
-                       :auto-focus true}]]
+                       :auto-focus true}]
+      (when (seq custom-shortcuts)
+        [:> icon-button* {:variant "ghost"
+                          :aria-label (tr "shortcuts.reset-all")
+                          :on-click on-reset-all
+                          :icon i/reload
+                          :icon-size "s"}])]
 
      (if match-any?
        [:div {:class (stl/css :shortcuts-list)}
         (for [section all-shortcuts]
-          [:> shortcut-section* {:key (->> section second :id first)
-                                 :section section
-                                 :manage-sections manage-sections
-                                 :open-sections open-sections
-                                 :filter-term filter-term}])]
+          (let [[section-key _] section
+                ws-editable? (contains? #{:basics :workspace} section-key)]
+            [:> shortcut-section* {:key (->> section second :id first)
+                                   :section section
+                                   :manage-sections manage-sections
+                                   :open-sections open-sections
+                                   :filter-term filter-term
+                                   :editable? ws-editable?
+                                   :custom-shortcuts custom-shortcuts
+                                   :on-edit on-edit-shortcut
+                                   :on-reset on-reset-shortcut}]))]
        [:div {:class (stl/css :not-found)} (tr "shortcuts.not-found")])]))
