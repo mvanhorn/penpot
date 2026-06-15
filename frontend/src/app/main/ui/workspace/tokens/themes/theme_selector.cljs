@@ -66,7 +66,6 @@
           [:> text* {:as "span" :typography "headline-small" :class (stl/css :group) :id (dm/str (str/kebab group) "-label") :title group} group])
         [:> themes-list* {:themes themes
                           :token-status token-status
-                          ;; :active-theme-paths active-theme-paths
                           :on-close on-close
                           :is-grouped true}]])
      [:li {:class (stl/css :separator)
@@ -81,22 +80,19 @@
 (mf/defc theme-selector*
   [{:keys []}]
   (let [;; Store
-        tokens-lib   (mf/use-ctx ctx/tokens-lib)
-        token-status (mf/use-ctx ctx/token-status)
+        tokens-lib          (mf/use-ctx ctx/tokens-lib)
+        token-status        (mf/use-ctx ctx/token-status)
 
-        active-themes-count (ctos/active-themes-count token-status)
-        active-theme-paths  (-> (ctob/get-active-theme-paths tokens-lib)  ;; TODO replace by a call to ctos
-                                (disj ctob/hidden-theme-path))
+        active-themes       (ctos/active-themes token-status tokens-lib)
+        active-themes-count (count active-themes)
 
         can-edit?  (:can-edit (deref refs/permissions))
 
         ;; Data
         current-label (cond
                         (> active-themes-count 1) (tr "workspace.tokens.active-themes" active-themes-count)
-                        (= active-themes-count 1) (some->> (first active-theme-paths)
-                                                           (ctob/split-theme-path)
-                                                           (remove empty?)
-                                                           (str/join " / "))
+                        (= active-themes-count 1) (-> (first active-themes)
+                                                      (ctob/get-theme-path true))
                         :else (tr "workspace.tokens.no-active-theme"))
 
         ;; State
@@ -148,9 +144,7 @@
 
           [:& dropdown {:show is-open?
                         :on-close on-close-dropdown}
-           [:> theme-options* {;;:active-theme-paths active-theme-paths
-                               ;;:themes themes
-                               :tokens-lib tokens-lib
+           [:> theme-options* {:tokens-lib tokens-lib
                                :token-status token-status
                                :on-close on-close-dropdown}]]])
         container))]))

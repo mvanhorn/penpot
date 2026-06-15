@@ -38,17 +38,23 @@
   ([state file-id]
    (dm/get-in state [:files file-id :data])))
 
-(defn lookup-tokens-lib
+(defn lookup-tokens-file-data
   [state]
   (let [current-file-data (lookup-file-data state)
-        tokens-file-id (or (:tokens-file current-file-data) (:id current-file-data))
-        tokens-file-data (lookup-file-data state tokens-file-id)]
+        tokens-file-id (or (:tokens-file current-file-data) (:id current-file-data))]
+    (lookup-file-data state tokens-file-id)))
+
+(defn lookup-tokens-lib
+  [state]
+  (let [tokens-file-data (lookup-tokens-file-data state)]
     (ctf/get-tokens-lib tokens-file-data)))
 
 (defn lookup-token-status
   [state]
-  (let [current-file-data (lookup-file-data state)]
-    (ctf/get-token-status current-file-data)))
+  (let [current-file-data (lookup-file-data state)
+        tokens-file-id (or (:tokens-file current-file-data) (:id current-file-data))
+        tokens-file-data (lookup-file-data state tokens-file-id)]
+    (ctf/get-token-status current-file-data tokens-file-data)))
 
 (defn get-page
   [fdata page-id]

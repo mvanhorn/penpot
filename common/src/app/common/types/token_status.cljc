@@ -8,6 +8,7 @@
   (:require
    #?(:clj [app.common.fressian :as fres])
    #?(:clj [clojure.data.json :as c.json])
+   [app.common.data :as d]
    [app.common.schema :as sm]
    [app.common.schema.generators :as sg]
    [app.common.transit :as t]
@@ -25,6 +26,9 @@
   (deactivate-theme [_ tokens-lib theme-id] "Deactivate a theme and update active sets")
   (set-theme-status [_ tokens-lib theme-id status] "Set the activation status of a theme")
   (theme-active? [_ theme-id] "Check if a theme is active")
+  (get-active-theme-ids [_] "Return a clojure set of active theme ids")
+  (get-active-set-ids [_] "Return a clojure set of active set ids")
+  (active-themes [_ tokens-lib] "Return an ordered sequence of active themes")
   (active-themes-count [_] "Return the number of active themes")
   (activate-set [_ set-id] "Add a set to active sets")
   (deactivate-set [_ set-id] "Remove a set from active sets")
@@ -45,21 +49,27 @@
                (c.json/-write (datafy this) writter options))])
 
   ITokenStatus
+  (get-active-theme-ids [_]
+    active-theme-ids)
+
+  (get-active-set-ids [_]
+    active-set-ids)
+
   (activate-theme [this tokens-lib theme-id]
-    (assert (ctob/tokens-lib? tokens-lib) "expected valid tokens-lib")
+    ;; (assert (ctob/tokens-lib? tokens-lib) "expected valid tokens-lib")
     (assert (uuid? theme-id) "expected valid theme-id")
     (if-not (theme-active? this theme-id)
       (if-let [theme (ctob/get-theme tokens-lib theme-id)]
-        (let [group-themes   (ctob/get-themes-in-group tokens-lib (:group theme))
+        (let [group-themes      (into #{} (ctob/get-themes-in-group tokens-lib (:group theme)))
               active-theme-ids' (-> (set/difference active-theme-ids group-themes)
-                                 (conj theme-id))]
+                                    (conj theme-id))]
           (TokenStatus. active-theme-ids'
                         (calculate-active-sets active-theme-ids' tokens-lib)))
         this)
       this))
 
   (deactivate-theme [this tokens-lib theme-id]
-    (assert (ctob/tokens-lib? tokens-lib) "expected valid tokens-lib")
+    ;; (assert (ctob/tokens-lib? tokens-lib) "expected valid tokens-lib")
     (assert (uuid? theme-id) "expected valid theme-id")
     (if (theme-active? this theme-id)
       (let [active-theme-ids' (disj active-theme-ids theme-id)]
@@ -67,17 +77,24 @@
                       (calculate-active-sets active-theme-ids' tokens-lib)))
       this))
 
-  (set-theme-status [this tokens-lib theme-id status]
-    (assert (ctob/tokens-lib? tokens-lib) "expected valid tokens-lib")
-    (assert (uuid? theme-id) "expected valid theme-id")
-    (assert (boolean? status) "expected boolean status")
-    (if status
-      (activate-theme this tokens-lib theme-id)
-      (deactivate-theme this tokens-lib theme-id)))
+  ;; (set-theme-status [this tokens-lib theme-id status]
+  ;;   (assert (ctob/tokens-lib? tokens-lib) "expected valid tokens-lib")
+  ;;   (assert (uuid? theme-id) "expected valid theme-id")
+  ;;   (assert (boolean? status) "expected boolean status")
+  ;;   (if status
+  ;;     (activate-theme this tokens-lib theme-id)
+  ;;     (deactivate-theme this tokens-lib theme-id)))
+
+  (set-theme-status [_ _id theme-ids set-ids]
+    (TokenStatus. theme-ids set-ids))
 
   (theme-active? [_ theme-id]
     (assert (uuid? theme-id) "expected valid theme-id")
     (contains? active-theme-ids theme-id))
+
+  (active-themes [this tokens-lib]
+    (->> (ctob/get-themes tokens-lib)
+         (filter #(theme-active? this (ctob/get-id %)))))
 
   (active-themes-count [_]
     (count active-theme-ids))
@@ -103,7 +120,7 @@
   (active-set-count [_]
     (count active-set-ids)))
 
-(defn- calculate-active-sets
+(defn calculate-active-sets
   [active-theme-ids tokens-lib]
   (let [active-themes (map #(ctob/get-theme tokens-lib %) active-theme-ids)    ;; OJOOOOOOOOOOOOOOOOOOOOO
         active-set-names (reduce set/union #{} (map :sets active-themes))
@@ -162,6 +179,7 @@
                                (ctob/get-active-themes tokens-lib))
         active-set-ids   (into #{}
                                (comp (map #(ctob/get-set-by-name tokens-lib %))
+                                     (remove nil?)
                                      (map ctob/get-id))
                                (ctob/get-active-themes-set-names tokens-lib))]
     (make-token-status :active-theme-ids active-theme-ids

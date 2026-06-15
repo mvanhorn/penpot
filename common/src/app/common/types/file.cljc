@@ -323,11 +323,12 @@
   (:tokens-lib file-data))
 
 (defn get-token-status
-  [file-data]
-  (if (and (some? (:tokens-lib file-data)) (nil? (:token-status file-data)))
-    ;; TODO: remove this when we deprecate old-style files without token-status
-    (ctos/make-token-status-from-lib (:tokens-lib file-data))
-    (:token-status file-data)))
+  [file-data tokens-file-data]
+  (let [tokens-file-data (or tokens-file-data file-data)]
+    (if (and (some? (:tokens-lib tokens-file-data)) (nil? (:token-status file-data)))
+      ;; TODO: remove this when we deprecate old-style files without token-status
+      (ctos/make-token-status-from-lib (:tokens-lib tokens-file-data))
+      (:token-status file-data))))
 
 (defn update-tokens-lib
   "Update the tokens-lib inside file-data through a callback function.

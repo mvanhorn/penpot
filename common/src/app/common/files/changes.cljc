@@ -402,7 +402,8 @@
     [:map {:title "SetTokenThemeStatus"}
      [:type [:= :set-token-theme-status]]
      [:id ::sm/uuid]
-     [:status :boolean]]]
+     [:theme-ids [:set ::sm/uuid]]
+     [:set-ids [:set ::sm/uuid]]]]
 
    ;; TODO deprecate this once everyone uses set-token-theme-status
    [:set-active-token-themes
@@ -1050,10 +1051,10 @@
                                      (ctob/make-token-theme (merge prev-token-theme attrs)))))))))
 
 (defmethod process-change :set-token-theme-status
-  [data {:keys [id status]}]
+  [data {:keys [id theme-ids set-ids]}]
   (let [data' (ctf/ensure-tokens-lib data)]
     (-> data'
-        (ctf/update-token-status ctos/set-theme-status (ctf/get-tokens-lib data') id status))))
+        (ctf/update-token-status ctos/set-theme-status id theme-ids set-ids))))
 
 (defmethod process-change :set-active-token-themes
   [data {:keys [theme-paths]}]

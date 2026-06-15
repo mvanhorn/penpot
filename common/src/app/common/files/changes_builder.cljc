@@ -1022,14 +1022,15 @@
         (apply-changes-local))))
 
 (defn set-token-theme-status
-  [changes id status]
+  [changes id theme-ids set-ids]
   (assert-library! changes)
   (let [library-data (::library-data (meta changes))
-        token-status (ctf/get-token-status library-data)
-        prev-status  (ctos/theme-active? token-status id)]
+        token-status (ctf/get-token-status library-data nil)
+        prev-theme-ids  (ctos/get-active-theme-ids token-status)
+        prev-set-ids  (ctos/get-active-set-ids token-status)]
     (-> changes
-        (update :redo-changes conj {:type :set-token-theme-status :id id :status status})
-        (update :undo-changes conj {:type :set-token-theme-status :id id :status prev-status})
+        (update :redo-changes conj {:type :set-token-theme-status :id id :theme-ids theme-ids :set-ids set-ids})
+        (update :undo-changes conj {:type :set-token-theme-status :id id :theme-ids prev-theme-ids :set-ids prev-set-ids})
         (apply-changes-local))))
 
 (defn set-active-token-themes

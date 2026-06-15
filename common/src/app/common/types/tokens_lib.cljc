@@ -755,11 +755,15 @@
 
 (def ^:private theme-separator "/")
 
-(defn- join-theme-path [group name]
-  (cpn/join-path [group name] :separator theme-separator :with-spaces? false))
+(defn- join-theme-path [group name with-spaces?]
+  (let [path (if (and (str/empty? group) with-spaces?) [name] [group name])]
+    (cpn/join-path path :separator theme-separator :with-spaces? with-spaces?)))
 
-(defn get-theme-path [theme]
-  (join-theme-path (:group theme) (:name theme)))
+(defn get-theme-path
+  ([theme]
+   (get-theme-path theme false))
+  ([theme with-spaces?]
+   (join-theme-path (:group theme) (:name theme) with-spaces?)))
 
 (defn split-theme-path [path]
   (cpn/split-group-name path
@@ -767,7 +771,7 @@
                         :with-spaces? false))
 
 (def hidden-theme-path
-  (join-theme-path hidden-theme-group hidden-theme-name))
+  (join-theme-path hidden-theme-group hidden-theme-name false))
 
 ;; === TokenThemes (collection)
 
@@ -1179,7 +1183,7 @@ Will return a value that matches this schema:
                               (d/dissoc-in [group name])))
                         (if same-path?
                           active-themes
-                          (disj active-themes (join-theme-path group name)))))))
+                          (disj active-themes (join-theme-path group name false)))))))
       this))
 
   (delete-theme [this id]
@@ -1188,14 +1192,14 @@ Will return a value that matches this schema:
       (if theme
         (TokensLib. sets
                     (d/dissoc-in themes [group name])
-                    (disj active-themes (join-theme-path group name)))
+                    (disj active-themes (join-theme-path group name false)))
         this)))
 
   (get-theme-tree [_]
     themes)
 
   (get-theme-tree-no-hidden [_]
-    (dissoc themes hidden-theme-group))
+    (d/dissoc-in themes [hidden-theme-group hidden-theme-name]))
 
   (get-theme-groups [_]
     (into [] (comp

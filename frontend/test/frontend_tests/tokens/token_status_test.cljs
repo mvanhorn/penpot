@@ -16,25 +16,27 @@
   (-> (thf/sample-file :file1)
       (tht/add-tokens-lib)
       (tht/update-tokens-lib
-       #(-> %
-            ;; Add token sets
-            (ctob/add-set (ctob/make-token-set :id (thi/new-id! :set-active)
-                                               :name "set-active"))
-            (ctob/add-set (ctob/make-token-set :id (thi/new-id! :set-inactive)
-                                               :name "set-inactive"))
-            ;; Add themes
-            (ctob/add-theme (ctob/make-token-theme :id (thi/new-id! :theme-active)
-                                                   :name "theme-active"
-                                                   :group "group-1"
-                                                   :sets #{"set-active"}))
-            (ctob/add-theme (ctob/make-token-theme :id (thi/new-id! :theme-inactive)
-                                                   :name "theme-inactive"
-                                                   :group "group-1"
-                                                   :sets #{"set-inactive"}))))
+       (fn [tokens-lib]
+         (-> tokens-lib
+             ;; Add token sets
+             (ctob/add-set (ctob/make-token-set :id (thi/new-id! :set-active)
+                                                :name "set-active"))
+             (ctob/add-set (ctob/make-token-set :id (thi/new-id! :set-inactive)
+                                                :name "set-inactive"))
+             ;; Add themes
+             (ctob/add-theme (ctob/make-token-theme :id (thi/new-id! :theme-active)
+                                                    :name "theme-active"
+                                                    :group "group-1"
+                                                    :sets #{"set-active"}))
+             (ctob/add-theme (ctob/make-token-theme :id (thi/new-id! :theme-inactive)
+                                                    :name "theme-inactive"
+                                                    :group "group-1"
+                                                    :sets #{"set-inactive"})))))
       (tht/update-token-status
-       #(-> %
-            (ctos/activate-theme (thi/id :theme-active))
-            (ctos/activate-set (thi/id :set-active))))))
+       (fn [token-status tokens-lib]
+         (-> token-status
+             (ctos/activate-theme tokens-lib (thi/id :theme-active))
+             (ctos/activate-set (thi/id :set-active)))))))
 
 (t/deftest test-token-status-active-inactive
   (t/testing "lookup helpers and active checks"
