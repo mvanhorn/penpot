@@ -156,6 +156,7 @@ impl Path {
         let mut current_point = 0;
         let mut current_conic = 0;
         let mut last_point = skia::Point::new(0.0, 0.0);
+        let mut subpath_start = skia::Point::new(0.0, 0.0);
 
         for verb in verbs {
             match verb {
@@ -163,12 +164,15 @@ impl Path {
                     let p = points[current_point];
                     segments.push(Segment::MoveTo((p.x, p.y)));
                     last_point = p;
+                    subpath_start = p;
                     current_point += 1;
                 }
                 skia::PathVerb::Line => {
                     let p = points[current_point];
-                    segments.push(Segment::LineTo((p.x, p.y)));
-                    last_point = p;
+                    if p != last_point {
+                        segments.push(Segment::LineTo((p.x, p.y)));
+                        last_point = p;
+                    }
                     current_point += 1;
                 }
                 skia::PathVerb::Quad => {
@@ -239,10 +243,19 @@ impl Path {
                     current_point += 3;
                 }
                 skia::PathVerb::Close => {
+                    if let Some(Segment::LineTo(p)) = segments.last() {
+                        if (p.0 - subpath_start.x).abs() < 1e-5
+                            && (p.1 - subpath_start.y).abs() < 1e-5
+                        {
+                            segments.pop();
+                        }
+                    }
                     segments.push(Segment::Close);
                 }
             }
         }
+
+        simplify_collinear_lines(&mut segments);
 
         let mut result = Path::new(segments);
         result.skia_path.set_fill_type(fill_type);
@@ -339,5 +352,50 @@ impl Path {
 
     pub fn bounds(&self) -> math::Bounds {
         math::Bounds::from_rect(self.skia_path.bounds())
+    }
+}
+
+fn segment_endpoint(seg: &Segment) -> Option<(f32, f32)> {
+    match seg {
+        Segment::MoveTo(p) | Segment::LineTo(p) => Some(*p),
+        Segment::CurveTo((_, _, p)) => Some(*p),
+        Segment::Close => None,
+    }
+}
+
+/// Removes intermediate LineTo segments that lie on a straight line
+/// between their previous and next endpoints. Only merges when the segments
+/// go in the same direction (dot >= 0), avoiding modification of backtracking paths.
+fn simplify_collinear_lines(segments: &mut Vec<Segment>) {
+    let mut i = 2;
+    while i < segments.len() {
+        let p0 = segment_endpoint(&segments[i - 2]);
+        let p1 = match &segments[i - 1] {
+            Segment::LineTo(p) => *p,
+            _ => {
+                i += 1;
+                continue;
+            }
+        };
+        let p2 = match &segments[i] {
+            Segment::LineTo(p) => *p,
+            _ => {
+                i += 1;
+                continue;
+            }
+        };
+        if let Some(p0) = p0 {
+            let dx1 = p1.0 - p0.0;
+            let dy1 = p1.1 - p0.1;
+            let dx2 = p2.0 - p1.0;
+            let dy2 = p2.1 - p1.1;
+            let cross = dx1 * dy2 - dy1 * dx2;
+            let dot = dx1 * dx2 + dy1 * dy2;
+            if cross.abs() < 1e-1 && dot >= 0.0 {
+                segments.remove(i - 1);
+                continue;
+            }
+        }
+        i += 1;
     }
 }

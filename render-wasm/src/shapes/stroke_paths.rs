@@ -58,27 +58,30 @@ pub fn stroke_to_path(
     // For inner/outer strokes, use boolean ops to clip
     // the 2×-width stroke outline to the correct region.
     // Set EvenOdd to preserve the annular ring's inner hole,
-    // then as_winding() on the result fixes contour winding
-    // for Penpot's NonZero fill rule.
+    // then switch to Winding for Penpot's NonZero fill rule.
+    // Use set_fill_type instead of as_winding() because as_winding()
+    // decomposes self-intersecting geometry, which removes points
+    // at intersections of straight lines in closed paths.
+    // Center strokes skip the conversion: fill_path_with_paint
+    // already produces correctly-wound contours.
     let final_path = match render_kind {
         StrokeKind::Inner => {
-            stroke_outline.set_fill_type(skia::PathFillType::EvenOdd);
-            let inner = stroke_outline
+            stroke_outline.set_fill_type(skia::PathFillType::Winding);
+            let mut inner = stroke_outline
                 .op(&transformed_shape_path, skia::PathOp::Intersect)
                 .unwrap_or(stroke_outline);
-            inner.as_winding().unwrap_or(inner)
+            inner.set_fill_type(skia::PathFillType::Winding);
+            inner
         }
         StrokeKind::Outer => {
-            stroke_outline.set_fill_type(skia::PathFillType::EvenOdd);
-            let outer = stroke_outline
+            stroke_outline.set_fill_type(skia::PathFillType::Winding);
+            let mut outer = stroke_outline
                 .op(&transformed_shape_path, skia::PathOp::Difference)
                 .unwrap_or(stroke_outline);
-            outer.as_winding().unwrap_or(outer)
+            outer.set_fill_type(skia::PathFillType::Winding);
+            outer
         }
-        StrokeKind::Center => {
-            stroke_outline.set_fill_type(skia::PathFillType::EvenOdd);
-            stroke_outline.as_winding().unwrap_or(stroke_outline)
-        }
+        StrokeKind::Center => stroke_outline,
     };
 
     // If there was a path_transform, invert it back to local coords
