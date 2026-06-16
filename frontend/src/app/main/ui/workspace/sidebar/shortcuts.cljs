@@ -160,8 +160,7 @@
      (if match-any?
        [:div {:class (stl/css :shortcuts-list)}
         (for [section all-shortcuts]
-          (let [[section-key _] section
-                ws-editable? (contains? #{:basics :workspace} section-key)]
+          (let [[section-key _] section]
             [:> ss/shortcut-section* {:key (name section-key)
                                       :section section
                                       :manage-sections manage-sections

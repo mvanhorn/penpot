@@ -137,12 +137,12 @@
 
         tabs
         (mf/with-memo []
-          [{:label "All shortcuts"
+          [{:label "All"
             :id "all"}
-           {:label "Personalized shortcuts"
+           {:label "Personalized"
             :data-testid "personalized"
             :id "personalized"}
-           {:label "Not assigned shortcuts"
+           {:label "Not assigned"
             :data-testid "not-assigned"
             :id "not-assigned"}])
 
@@ -167,7 +167,7 @@
       [:> tab-switcher* {:tabs tabs
                          :selected (name section)
                          :on-change handle-change-tab
-                         :class (stl/css :viewer-tab-switcher)}
+                         :class (stl/css :shortcuts-switcher)}
        (case section
          :all
          [:> all-shortcuts-section* {:profile profile}]

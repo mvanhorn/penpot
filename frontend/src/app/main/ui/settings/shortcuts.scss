@@ -6,10 +6,16 @@
 
 .shortcuts-page {
   height: 100%;
+  max-width: 31.25rem;
+    width: 36.25rem;
+      margin: 5rem auto 7.5rem;
 }
 
 .shortcuts-content {
   padding: var(--sp-xl);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .shortcuts-section {
