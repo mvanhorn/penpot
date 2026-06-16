@@ -48,6 +48,9 @@
 (def ^:private go-settings-notifications
   #(st/emit! (rt/nav :settings-notifications)))
 
+(def ^:private go-settings-shortcuts
+  #(st/emit! (rt/nav :settings-shortcuts)))
+
 (defn- show-release-notes
   [event]
   (let [version (:main cf/version)]
@@ -66,6 +69,7 @@
         subscription?  (= section :settings-subscription)
         integrations?  (= section :settings-integrations)
         notifications? (= section :settings-notifications)
+        shortcuts?     (= section :settings-shortcuts)
         team-id        (or (dtm/get-last-team-id)
                            (:default-team-id profile))
 
@@ -99,6 +103,11 @@
                                   :settings-item true)
              :on-click go-settings-notifications}
         [:span {:class (stl/css :element-title)} (tr "labels.notifications")]]
+       
+       [:li {:class (stl/css-case :current shortcuts?
+                                  :settings-item true)
+             :on-click go-settings-shortcuts}
+        [:span {:class (stl/css :element-title)} "shortcuts"]]
 
        [:li {:class (stl/css-case :current options?
                                   :settings-item true)
