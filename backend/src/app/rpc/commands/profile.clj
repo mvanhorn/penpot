@@ -499,7 +499,10 @@
     (when (contains? cf/flags :nitrate)
       (nitrate/call cfg :delete-owned-orgs {:profile-id profile-id})
       ;; Remove the user from any remaining org memberships.
-      (nitrate/call cfg :remove-profile-from-all-orgs {:profile-id profile-id}))
+      (nitrate/call cfg :remove-profile-from-all-orgs {:profile-id profile-id})
+      (when-let [subscription (nitrate/call cfg :get-subscription {:profile-id profile-id})]
+        (when (not= "canceled" (:status subscription))
+          (nitrate/call cfg :cancel-subscription {:profile-id profile-id}))))
 
     ;; Schedule cascade deletion to a worker
     (wrk/submit! {::db/conn conn

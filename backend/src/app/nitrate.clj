@@ -391,6 +391,15 @@
                              profile-id)
                         schema:subscription params)))
 
+(defn- cancel-subscription-api
+  [cfg {:keys [profile-id] :as params}]
+  (let [baseuri (cf/get :nitrate-backend-uri)]
+    (request-to-nitrate cfg :delete
+                        (str baseuri
+                             "/api/subscriptions/"
+                             profile-id)
+                        nil params)))
+
 (def ^:private schema:subscription-warning
   [:maybe
    [:map {:title "SubscriptionWarning"}
@@ -477,6 +486,7 @@
      :delete-team                  (partial delete-team-api cfg)
      :remove-team-from-org         (partial remove-team-from-org-api cfg)
      :get-subscription             (partial get-subscription-api cfg)
+     :cancel-subscription          (partial cancel-subscription-api cfg)
      :get-subscription-warning     (partial get-subscription-warning-api cfg)
      :connectivity                 (partial get-connectivity-api cfg)
      :redeem-activation-code       (partial redeem-activation-code-api cfg)}))
