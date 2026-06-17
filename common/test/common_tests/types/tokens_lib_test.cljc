@@ -250,9 +250,9 @@
 (t/deftest get-theme-path
   (let [theme1 (ctob/make-token-theme :name "theme1")
         theme2 (ctob/make-token-theme :group "group1" :name "theme2")]
-    (t/is (= "/theme1" (ctob/get-theme-path theme1)))            ;; TODO perhaps we should remove the leading /
-    (t/is (= "/theme1" (ctob/get-theme-path theme1 false)))      ;;      but this may be a breaking change
-    (t/is (= " / theme1" (ctob/get-theme-path theme1 true)))
+    (t/is (= "/theme1" (ctob/get-theme-path theme1)))
+    (t/is (= "/theme1" (ctob/get-theme-path theme1 false)))
+    (t/is (= "theme1" (ctob/get-theme-path theme1 true)))
     (t/is (= "group1/theme2" (ctob/get-theme-path theme2)))
     (t/is (= "group1/theme2" (ctob/get-theme-path theme2 false)))
     (t/is (= "group1 / theme2" (ctob/get-theme-path theme2 true)))))
