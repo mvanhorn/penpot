@@ -1658,6 +1658,9 @@ impl TileTextureCache {
                 let Some(tile_ref) = self.grid.get(&tile) else {
                     continue;
                 };
+                if self.removed.contains(&tile) {
+                    continue;
+                }
 
                 self.transforms[index].tx = x as f32 * self.tile_size - offset.x;
                 self.transforms[index].ty = y as f32 * self.tile_size - offset.y;
