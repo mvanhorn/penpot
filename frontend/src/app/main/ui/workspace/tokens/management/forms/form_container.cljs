@@ -6,7 +6,6 @@
 
 (ns app.main.ui.workspace.tokens.management.forms.form-container
   (:require
-   [app.common.data :as d]
    [app.common.types.tokens-lib :as ctob]
    [app.config :as cf]
    [app.main.refs :as refs]
@@ -35,9 +34,8 @@
           (ctob/get-token-path token))
 
         tokens-tree-in-selected-set
-        (mf/with-memo [token-path tokens-in-selected-set]
-          (-> (ctob/tokens-tree tokens-in-selected-set)
-              (d/dissoc-in token-path)))
+        (mf/with-memo [tokens-in-selected-set]
+          (ctob/tokens-tree tokens-in-selected-set))
 
         props
         (mf/spread-props props {:token-type token-type
@@ -48,7 +46,8 @@
 
         props
         (if (contains? cf/flags :token-combobox)
-          (mf/spread-props props {:input-component token.controls/value-combobox*})
+          (mf/spread-props props {:input-component token.controls/value-combobox*
+                                  :current-token-path token-path})
           props)
 
         text-case-props
@@ -68,5 +67,4 @@
       :text-case [:> generic/form* text-case-props]
       :text-decoration [:> generic/form* text-decoration-props]
       :font-weight [:> generic/form* font-weight-props]
-      :border-radius [:> generic/form* props]
       [:> generic/form* props])))

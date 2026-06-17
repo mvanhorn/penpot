@@ -2351,6 +2351,8 @@ test.describe("Tokens tab - edition", () => {
 
     // Fill in values for all fields and verify they persist when switching tabs
     await fontSizeField.fill("16");
+
+    await page.waitForTimeout(500);
     await expect(saveButton).toBeEnabled();
 
     const fontWeightField = tokensUpdateCreateModal.getByRole("textbox", {

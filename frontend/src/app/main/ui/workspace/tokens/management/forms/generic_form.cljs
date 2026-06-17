@@ -77,9 +77,10 @@
            initial-errors
            value-type
            value-subfield
-           input-value-placeholder] :as props}]
+           input-value-placeholder
+           current-token-path] :as props}]
 
-  (let [make-schema     (or make-schema #(-> (cfo/make-token-schema % token-type)
+  (let [make-schema     (or make-schema #(-> (cfo/make-token-schema % token-type current-token-path)
                                              (sm/dissoc-key :id)))
         input-component (or input-component token.controls/input*)
         validate-token  (or validator default-validate-token)
