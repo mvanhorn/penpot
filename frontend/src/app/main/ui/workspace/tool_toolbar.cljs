@@ -4,21 +4,25 @@
 ;;
 ;; Copyright (c) KALEIDOS INC Sucursal en España SL
 
-(ns app.main.ui.ds.tool-toolbar.tool-toolbar
+(ns app.main.ui.workspace.tool-toolbar
   (:require-macros [app.main.style :as stl])
   (:require
    [app.common.geom.point :as gpt]
+   [app.config :as cf]
    [app.main.data.event :as ev]
    [app.main.data.modal :as modal]
    [app.main.data.workspace :as dw]
    [app.main.data.workspace.common :as dwc]
+   [app.main.data.workspace.mcp :as mcp]
    [app.main.data.workspace.media :as dwm]
    [app.main.data.workspace.shortcuts :as sc]
    [app.main.features :as features]
    [app.main.refs :as refs]
    [app.main.store :as st]
+   [app.main.ui.components.dropdown-menu :refer [dropdown-menu* dropdown-menu-item*]]
    [app.main.ui.components.file-uploader :as file-uploader]
    [app.main.ui.context :as ctx]
+   [app.main.ui.ds.buttons.button :refer [button*]]
    [app.main.ui.ds.buttons.icon-button :refer [icon-button*]]
    [app.main.ui.ds.foundations.assets.icon :as i]
    [app.util.dom :as dom]
@@ -31,28 +35,36 @@
   (l/derived (fn [state]
                (let [visibility      (get state :hide-toolbar)
                      path-edit-state (get state :edit-path)
-
                      selected        (get state :selected)
                      edition         (get state :edition)
-                     is-single         (= (count selected) 1)
 
-                     is-path-editing   (and is-single (some? (get path-edit-state edition)))]
+                     is-single       (= (count selected) 1)
+                     is-path-editing (and is-single (some? (get path-edit-state edition)))]
+
                  (if is-path-editing true visibility)))
              refs/workspace-local))
+
+(def grouped-tools
+  {:shapes {:default-tool :rect
+            :tools {:rect {:icon i/rectangle}
+                    :circle {:icon i/ellipse}}}
+   :free-draw {:default-tool :path
+               :tools {:path {:icon i/path}
+                       :curve {:icon i/curve}}}})
 
 (defn- tool-label
   [tool]
   (case tool
-    :move (tr "workspace.toolbar.move"  (sc/get-tooltip :move))
-    :frame (tr "workspace.toolbar.frame" (sc/get-tooltip :draw-frame))
-    :rect (tr "workspace.toolbar.rect" (sc/get-tooltip :draw-rect))
-    :circle (tr "workspace.toolbar.ellipse" (sc/get-tooltip :draw-ellipse))
-    :text (tr "workspace.toolbar.text" (sc/get-tooltip :draw-text))
-    :path (tr "workspace.toolbar.path" (sc/get-tooltip :draw-path))
-    :image (tr "workspace.toolbar.image" (sc/get-tooltip :insert-image))
-    :curve (tr "workspace.toolbar.curve" (sc/get-tooltip :draw-curve))
+    :move    (tr "workspace.toolbar.move"    (sc/get-tooltip :move))
+    :frame   (tr "workspace.toolbar.frame"   (sc/get-tooltip :draw-frame))
+    :rect    (tr "workspace.toolbar.rect"    (sc/get-tooltip :draw-rect))
+    :circle  (tr "workspace.toolbar.ellipse" (sc/get-tooltip :draw-ellipse))
+    :text    (tr "workspace.toolbar.text"    (sc/get-tooltip :draw-text))
+    :path    (tr "workspace.toolbar.path"    (sc/get-tooltip :draw-path))
+    :image   (tr "workspace.toolbar.image"   (sc/get-tooltip :insert-image))
+    :curve   (tr "workspace.toolbar.curve"   (sc/get-tooltip :draw-curve))
     :plugins (tr "workspace.toolbar.plugins" (sc/get-tooltip :plugins))
-    :debug "Debugging tool"
+    :debug   "Debugging tool"
     (name tool)))
 
 (defn- active-group-tool
@@ -70,52 +82,48 @@
   (let [tool-id (active-group-tool group drawtool)]
     (str (tr "labels.options") ": " (tool-label tool-id))))
 
-(mf/defc tool-button*
-  {::mf/wrap [mf/memo]}
-  [{:keys [selected has-flyout has-tooltip title icon on-click aria-haspopup aria-expanded role data-tool]}]
-  [:> icon-button* {:variant "ghost"
-                    :aria-haspopup aria-haspopup
-                    :aria-expanded aria-expanded
-                    :aria-pressed selected
-                    :role role
-                    :aria-label title
-                    :tooltip-placement "bottom"
-                    :class (stl/css :main-toolbar-options-button)
-                    :on-click on-click
-                    :icon icon
-                    :flyout-indicator has-flyout
-                    :has-tooltip has-tooltip
-                    :data-tool data-tool}])
-
-(def grouped-tools
-  {:shapes {:default-tool :rect
-            :tools {:rect {:icon i/rectangle}
-                    :circle {:icon i/ellipse}}}
-   :free-draw {:default-tool :path
-               :tools {:path {:icon i/path}
-                       :curve {:icon i/curve}}}})
-
 (defn- cancel-timer!
   [timer-ref*]
   (when-let [timer (mf/ref-val timer-ref*)]
     (ts/dispose! timer)
     (mf/set-ref-val! timer-ref* nil)))
 
+(mf/defc tool-button*
+  {::mf/private true
+   ::mf/wrap [mf/memo]}
+  [{:keys [selected has-flyout has-tooltip title icon on-click aria-haspopup aria-expanded role data-tool]}]
+  [:> icon-button* {:variant "ghost"
+                    :aria-haspopup aria-haspopup
+                    :aria-expanded aria-expanded
+                    :aria-pressed selected
+                    :aria-label title
+                    :role role
+                    :tooltip-placement "bottom"
+                    :on-click on-click
+                    :icon icon
+                    :flyout-indicator has-flyout
+                    :has-tooltip has-tooltip
+                    :data-tool data-tool}])
+
 (mf/defc grouped-tool-flyout*
-  {::mf/wrap [mf/memo]}
+  {::mf/private true
+   ::mf/wrap [mf/memo]}
   [{:keys [group drawtool on-select-tool]}]
   (let [default-tool*  (mf/use-state (active-group-tool group drawtool))
         default-tool   (deref default-tool*)
-        default-icon   (:icon (get-in group [:tools default-tool]))
-        subtools       (:tools group)
+
         open*          (mf/use-state false)
         open           (deref open*)
-        open-timer*   (mf/use-ref nil)
-        close-timer*  (mf/use-ref nil)
-        menu-label   (group-menu-label group drawtool)
-        selected     (boolean (is-selected-group group drawtool))
 
-        select-tool
+        open-timer*    (mf/use-ref nil)
+        close-timer*   (mf/use-ref nil)
+
+        default-icon   (:icon (get-in group [:tools default-tool]))
+        subtools       (:tools group)
+        menu-label     (group-menu-label group drawtool)
+        selected       (boolean (is-selected-group group drawtool))
+
+        on-select-tool
         (mf/use-fn
          (fn [event]
            (let [tool (-> (dom/get-current-target event)
@@ -153,9 +161,9 @@
         (cancel-timer! open-timer*)
         (cancel-timer! close-timer*)))
 
-    [:li {:on-pointer-enter on-display-menu
-          :on-pointer-leave on-hide-menu
-          :class (stl/css :main-toolbar-group)}
+    [:li {:class (stl/css :main-toolbar-group)
+          :on-pointer-enter on-display-menu
+          :on-pointer-leave on-hide-menu}
      [:div {:role "group"
             :aria-label menu-label}
       [:> tool-button* {:title (tool-label default-tool)
@@ -178,18 +186,19 @@
           [:> tool-button* {:title (tool-label id)
                             :selected (= drawtool id)
                             :icon icon
-                            :on-click select-tool
+                            :on-click on-select-tool
                             :data-tool (name id)
                             :role "menuitemradio"
                             :aria-checked (= drawtool id)}]])]]]))
 
-(mf/defc image-upload-tool
-  {::mf/wrap [mf/memo]}
+(mf/defc image-upload-tool*
+  {::mf/private true
+   ::mf/wrap [mf/memo]}
   []
-  (let [ref            (mf/use-ref nil)
-        file-id        (mf/use-ctx ctx/current-file-id)
+  (let [ref      (mf/use-ref nil)
+        file-id  (mf/use-ctx ctx/current-file-id)
 
-        display-uploader
+        on-display-uploader
         (mf/use-fn
          (fn []
            (st/emit! :interrupt (dw/clear-edition-mode))
@@ -208,17 +217,66 @@
                          :blobs (seq blobs)
                          :position (gpt/point x y)}]
              (st/emit! (dwm/upload-media-workspace params)))))]
-    [:li
+
+    [:*
      [:> tool-button* {:title (tool-label :image)
                        :selected nil
                        :icon i/img
-                       :on-click display-uploader}]
-     [:& file-uploader/file-uploader
-      {:input-id "image-upload"
-       :accept dwm/accept-image-types
-       :multi true
-       :ref ref
-       :on-selected on-selected}]]))
+                       :on-click on-display-uploader}]
+     [:& file-uploader/file-uploader {:input-id "image-upload"
+                                      :accept dwm/accept-image-types
+                                      :multi true
+                                      :ref ref
+                                      :on-selected on-selected}]]))
+
+(mf/defc mcp-tool*
+  {::mf/private true
+   ::mf/wrap [mf/memo]}
+  [{:keys [is-mcp-connected]}]
+  (let [menu-open*   (mf/use-state false)
+        menu-open?   (deref menu-open*)
+
+        on-toggle-menu
+        (mf/use-fn
+         (fn [event]
+           (dom/stop-propagation event)
+           (swap! menu-open* not)))
+
+        on-close-menu
+        (mf/use-fn
+         #(reset! menu-open* false))
+
+        on-connect
+        (mf/use-fn
+         #(st/emit! (mcp/connect-mcp)
+                    (ev/event {::ev/name "connect-mcp-plugin"
+                               ::ev/origin "workspace:toolbar"})))]
+
+    [:*
+     [:> button* {:variant "ghost"
+                  :on-click on-toggle-menu
+                  :aria-pressed menu-open?
+                  :data-tool "mcp"
+                  :data-testid "mcp-btn"}
+      [:div {:class (stl/css-case :mcp-button true
+                                  :selected menu-open?)}
+       [:span {:class (stl/css-case :mcp-status-dot true
+                                    :connected is-mcp-connected)}]
+       [:span {:class (stl/css-case :mcp-button-label true
+                                    :connected is-mcp-connected)}
+        (tr "workspace.toolbar.mcp")]]]
+
+     [:div {:class (stl/css :mcp-menu-wrapper)}
+      [:> dropdown-menu* {:show menu-open?
+                          :on-close on-close-menu
+                          :class (stl/css :mcp-menu)}
+       (if is-mcp-connected
+         [:li {:class (stl/css :mcp-menu-info)
+               :role "presentation"}
+          (tr "workspace.toolbar.mcp-connected")]
+         [:> dropdown-menu-item* {:class (stl/css :mcp-menu-item)
+                                  :on-click on-connect}
+          (tr "workspace.toolbar.mcp-connect-here")])]]]))
 
 (mf/defc tool-toolbar*
   {::mf/wrap [mf/memo]}
@@ -227,19 +285,28 @@
         selected-edition      (mf/deref refs/selected-edition)
         rulers-enabled        (mf/deref refs/rulers?)
         toolbar-hidden        (mf/deref toolbar-hidden-ref)
+        mcp                   (mf/deref refs/mcp)
 
-        plugins-enabled  (features/active-feature? @st/state "plugins/runtime")
-
+        plugins-enabled? (features/active-feature? @st/state "plugins/runtime")
         read-only?       (mf/use-ctx ctx/workspace-read-only?)
 
-        display-plugins-manager
+        mcp-conn-status  (get mcp :connection-status)
+        mcp-valid-token? (get mcp :token-valid)
+        mcp-enabled?     (get mcp :enabled)
+
+        mcp-connected?   (= "connected" mcp-conn-status)
+        mcp-show?        (and (contains? cf/flags :mcp)
+                              mcp-enabled?
+                              mcp-valid-token?)
+
+        on-display-plugins-manager
         (mf/use-fn
          (fn []
            (st/emit! (ev/event {::ev/name "open-plugins-manager"
                                 ::ev/origin "workspace:toolbar"})
                      (modal/show :plugin-management {}))))
 
-        toggle-debug-panel
+        on-toggle-debug-panel
         (mf/use-fn
          (mf/deps layout)
          (fn []
@@ -267,7 +334,7 @@
              (ts/schedule 100
                           #(st/emit! (dw/select-for-drawing tool))))))
 
-        toggle-toolbar
+        on-toggle-toolbar
         (mf/use-fn
          (fn [event]
            (dom/blur! (dom/get-target event))
@@ -309,28 +376,37 @@
                            :on-click on-select-tool
                            :data-tool "text"}]]
 
-        [:> image-upload-tool]
+        [:li {:class (stl/css :main-toolbar-option)}
+         [:> image-upload-tool*]]
 
         [:> grouped-tool-flyout* {:key :free-draw
                                   :group (get grouped-tools :free-draw)
                                   :drawtool selected-drawing-tool
                                   :on-select-tool on-select-tool}]
 
-        (when plugins-enabled
-          [:li {:class (stl/css :main-toolbar-option :main-toolbar-option-plugins)}
+        (when (or plugins-enabled? *assert* mcp-show?)
+          [:div {:class (stl/css :separator)}])
+
+        (when plugins-enabled?
+          [:li {:class (stl/css :main-toolbar-option)}
            [:> tool-button* {:title (tool-label :plugins)
                              :icon i/puzzle
-                             :on-click display-plugins-manager
+                             :on-click on-display-plugins-manager
                              :data-tool "plugins"}]])
 
         (when *assert*
-          [:li {:class (stl/css :main-toolbar-option :main-toolbar-option-debug)}
+          [:li {:class (stl/css :main-toolbar-option)}
            [:> tool-button* {:title (tool-label :debug)
                              :selected (contains? layout :debug-panel)
                              :icon i/bug
-                             :on-click toggle-debug-panel}]])]
+                             :on-click on-toggle-debug-panel}]])
+
+        (when mcp-show?
+          [:li {:class (stl/css :main-toolbar-option)}
+           [:> mcp-tool* {:is-mcp-connected mcp-connected?}]])]
+
        [:button {:title (tr "workspace.toolbar.toggle-toolbar")
                  :aria-label (tr "workspace.toolbar.toggle-toolbar")
                  :class (stl/css :toolbar-handler)
-                 :on-click toggle-toolbar}
+                 :on-click on-toggle-toolbar}
         [:div {:class (stl/css :toolbar-handler-indicator)}]]])))
