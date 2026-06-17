@@ -55,7 +55,7 @@
 
       [:div {:class (stl/css :dashboard-content)}
        [:> header*]
-       [:section {:class (stl/css :dashboard-container)}
+       [:div {:class (stl/css :dashboard-container)}
         (case section
           :settings-profile
           [:> profile-page*]

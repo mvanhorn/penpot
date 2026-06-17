@@ -4,18 +4,29 @@
 //
 // Copyright (c) KALEIDOS INC Sucursal en España SL
 
+@use "ds/typography.scss" as t;
+@use "ds/_borders.scss" as *;
+@use "ds/spacing.scss" as *;
+@use "ds/_sizes.scss" as *;
+@use "ds/_utils.scss" as *;
+
 .shortcuts-page {
-  height: 100%;
-  max-width: 31.25rem;
-    width: 36.25rem;
-      margin: 5rem auto 7.5rem;
+  display: flex;
+  justify-content: center;
 }
 
 .shortcuts-content {
-  padding: var(--sp-xl);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  max-width: $sz-500;
+  width: px2rem(580);
+  padding: var(--sp-xl);
+}
+
+.page-title {
+  color: var(--color-foreground-primary);
+  width: 100%;
+  margin: px2rem(80) 0 px2rem(16);
 }
 
 .shortcuts-section {

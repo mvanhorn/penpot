@@ -2,6 +2,7 @@
   (:require-macros [app.main.style :as stl])
   (:require
    [app.common.data :as d]
+   [app.common.i18n :refer [tr]]
    [app.main.data.dashboard.shortcuts]
    [app.main.data.modal :as modal]
    [app.main.data.shortcuts :as ds]
@@ -128,8 +129,6 @@
                             :viewer-sc {}}]
        [:p "There are no not-assigned shortcuts."])]))
 
-
-
 (mf/defc shortcuts-page*
   [{:keys [profile]}]
   (let [section*        (mf/use-state :all)
@@ -152,28 +151,28 @@
          (fn [new-section]
            (reset! section* (keyword new-section))))]
 
-
     [:section {:class (stl/css :shortcuts-page)
                :aria-label "Shortcuts page"}
-     [:> heading* {:level 1
-                   :typography t/title-large
-                   :class (stl/css :color-primary)}
-      "Shortcuts page"]
-
      [:div {:class (stl/css :shortcuts-content)}
-      [:p "search-bar"]
-      [:button "restore all"]
-      [:p "This is the shortcuts page content."]
-      [:> tab-switcher* {:tabs tabs
-                         :selected (name section)
-                         :on-change handle-change-tab
-                         :class (stl/css :shortcuts-switcher)}
-       (case section
-         :all
-         [:> all-shortcuts-section* {:profile profile}]
+      [:> heading* {:level 1
+                    :typography t/title-large
+                    :class (stl/css :page-title)}
+       (tr "label.shortcuts")]
 
-         :personalized
-         [:> personalized-shortcuts-section* {:profile profile}]
+      [:div {:class (stl/css :shortcuts-content)}
+       [:p "search-bar"]
+       [:button "restore all"]
+       [:p "This is the shortcuts page content."]
+       [:> tab-switcher* {:tabs tabs
+                          :selected (name section)
+                          :on-change handle-change-tab
+                          :class (stl/css :shortcuts-switcher)}
+        (case section
+          :all
+          [:> all-shortcuts-section* {:profile profile}]
 
-         :not-assigned
-         [:> not-assigned-shortcuts-section* {:profile profile}])]]]))
+          :personalized
+          [:> personalized-shortcuts-section* {:profile profile}]
+
+          :not-assigned
+          [:> not-assigned-shortcuts-section* {:profile profile}])]]]]))

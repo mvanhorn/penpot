@@ -87,7 +87,8 @@
 
      [:hr {:class (stl/css :sidebar-separator)}]
 
-     [:div {:class (stl/css :sidebar-content-section)}
+     [:nav {:class (stl/css :sidebar-content-section)
+            :aria-label (tr "labels.settings")}
       [:ul {:class (stl/css :sidebar-nav-settings)}
        [:li {:class (stl/css-case :current profile?
                                   :settings-item true)
@@ -146,7 +147,7 @@
 (mf/defc sidebar*
   {::mf/wrap [mf/memo]}
   [{:keys [profile section]}]
-  [:div {:class (stl/css :dashboard-sidebar :settings)}
+  [:aside {:class (stl/css :dashboard-sidebar :settings)}
    [:> sidebar-content* {:profile profile
                          :section section}]
    [:> profile-section* {:profile profile}]])
